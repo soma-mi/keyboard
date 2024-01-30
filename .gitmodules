@@ -1,0 +1,9 @@
+[submodule "modules/qmk_firmware"]
+	path = modules/qmk_firmware
+	url = https://github.com/qmk/qmk_firmware
+[submodule "src/keyboards/alpaca/wfeclipse/keymaps/custom/features/qmk-vim"]
+	path = src/keyboards/alpaca/wfeclipse/keymaps/custom/features/qmk-vim
+	url = https://github.com/andrewjrae/qmk-vim.git
+[submodule "src/keyboards/alpaca/wfeclipse/keymaps/custom/features/jtu_custom_keycodes"]
+	path = src/keyboards/alpaca/wfeclipse/keymaps/custom/features/jtu_custom_keycodes
+	url = git@github.com:koktoh/jtu_custom_keycodes.git
