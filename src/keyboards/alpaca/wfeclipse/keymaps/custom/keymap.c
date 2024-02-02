@@ -51,6 +51,7 @@ enum custom_keycodes {
   SURROUND_PARENTHESES,
   SURROUND_BRACKETS,
   SURROUND_LESS,
+  CLEAR_SURROUND,
   DUPLICARE_OR_DELETE_LINE,
   DELETE_LINE,
   JOIN_LINE,
@@ -127,7 +128,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_NO,   DM_PLY1,   DM_PLY2, KC_NO,                    KC_NO,    KC_NO, KC_NO, KC_NO,     KC_NO,         SURROUND_PARENTHESES, KC_NO, KC_NO,             KC_NO, DELETE_SUBSEQUENT_LINE, DELETE_LINE, KC_NO,
     KC_LSFT, MO(MC2),   SELECT,  MOVE_TAIL,                KC_NO,    KC_NO, KC_NO, KC_NO,     INDENT,        KC_NO,                KC_NO, SURROUND_BRACKETS, KC_NO, KC_NO,                  DM_REC1,     DM_RSTP,
     COMBI,   MOVE_HEAD, KC_NO,   DUPLICARE_OR_DELETE_LINE, KC_NO,    KC_NO, KC_NO, JOIN_LINE, KC_NO,         KC_NO,                KC_NO, SURROUND_QUOT,            ADD_NEXT_LINE,          DM_REC2,     DM_RSTP,
-    KC_LSFT, SIDE_BTN,  TRIM,    KC_NO,                    REPEAT_M, MOVE_HEAD, KC_NO, KC_NO, SURROUND_LESS, KC_NO,                KC_NO,                           OSM(MOD_RSFT),          KC_WH_U,     KC_NO,
+    KC_LSFT, SIDE_BTN,  TRIM,    CLEAR_SURROUND,           REPEAT_M, MOVE_HEAD, KC_NO, KC_NO, SURROUND_LESS, KC_NO,                KC_NO,                           OSM(MOD_RSFT),          KC_WH_U,     KC_NO,
     KC_LCTL, KC_LALT,   COMBI,                       KC_NO,                    COMBI,    KC_RALT,   KC_HYPR,                                                        KC_WH_L,                KC_WH_D,     KC_WH_R
     ),
   [MC2] =LAYOUT(
@@ -232,6 +233,25 @@ static uint8_t repeat_mods;
 static bool repeat_combi;
 static bool repeat_is_lang1;
 
+void save_repeat_key(uint16_t key_code, uint8_t mods, bool combi, bool is_lang1) {
+  repeat_keycode = key_code;
+  repeat_mods = mods;
+  repeat_combi = combi;
+  repeat_is_lang1 = is_lang1;
+}
+
+void initialize_key_processing(void) {
+  clear_oneshot_mods();
+  reset_mods();
+}
+
+void finalize_key_processing(uint8_t mods_bk, bool combi_bk, bool is_lang1_bk) {
+  restore_mods(mods_bk);
+  combi = combi_bk;
+  ime_change_if_needed(is_lang1, is_lang1_bk);
+  is_lang1 = is_lang1_bk;
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   // 以下追加
   // JIGGLER
@@ -330,104 +350,86 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       return false;
     case SIDE_BTN:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         if (lshift) {
            clean_tap_code(KC_BTN5);
         } else {
            clean_tap_code(KC_BTN4);
         }
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SIDE_BTN_2:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         if (lshift) {
            clean_tap_code(KC_BTN4);
         } else {
            clean_tap_code(KC_BTN5);
         }
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case CAPSWORD:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         enable_caps_word();
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SNAKECASE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         if (lshift) {
           enable_caps_word();
         }
         enable_xcase_with(KC_UNDS);
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case KEBABCASE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         if (lshift) {
           enable_caps_word();
         }
         enable_xcase_with(KC_MINS);
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case CAMELCASE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
-        reset_mods();
+        initialize_key_processing();
         enable_xcase_with(OSM(MOD_LSFT));
         if (lshift) {
           set_oneshot_mods(MOD_BIT(KC_LSFT));
         }
-        restore_mods(mods_bk);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case COPY:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         copy();
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case PASTE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         paste();
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case MOVE_HEAD:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           home(lshift);
@@ -435,19 +437,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           move_word_head(lshift);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case MOVE_TAIL:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           end(lshift);
@@ -455,19 +451,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           move_word_end(lshift);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SELECT:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           select_line();
@@ -475,87 +465,70 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           select_word();
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SURROUND_QUOT:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         surround(key_conv(KC_QUOT), key_conv(KC_QUOT), combi, is_lang1, lshift, record);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SURROUND_PARENTHESES:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (lshift) {
           surround(key_conv(KC_9), key_conv(KC_0), combi, is_lang1, lshift, record);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SURROUND_BRACKETS:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         surround(key_conv(KC_LBRC), key_conv(KC_RBRC), combi, is_lang1, lshift, record);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case SURROUND_LESS:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (lshift) {
           surround(key_conv(KC_COMM), key_conv(KC_DOT), combi, is_lang1, lshift, record);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
+      }
+      return false;
+    case CLEAR_SURROUND:
+      if (record->event.pressed) {
+        initialize_key_processing();
+
+        move_word_head(false);
+        clean_tap_code(KC_BSPC);
+        move_word_end(false);
+        clean_tap_code(KC_DEL);
+
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case DUPLICARE_OR_DELETE_LINE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           delete_line();
@@ -563,83 +536,53 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           duplicate_line();
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case DELETE_LINE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         delete_line();
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case JOIN_LINE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         join_line();
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case TRIM:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         trim(!lshift, combi);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case INDENT:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         indent(combi);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case INSERT_SCLN_TAIL:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           insert_line_end(key_conv(KC_SCLN), is_lang1, lshift, record);
@@ -648,19 +591,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           insert_word_end(key_conv(KC_SCLN), is_lang1, lshift, record);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case INSERT_COMM_TAIL:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           insert_line_end(key_conv(KC_COMM), is_lang1, lshift, record);
@@ -669,19 +606,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           insert_word_end(key_conv(KC_COMM), is_lang1, lshift, record);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case DELETE_END_WORD:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         if (combi) {
           end(false);
@@ -691,53 +622,35 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
           clean_tap_code(KC_DEL);
         }
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case DELETE_SUBSEQUENT_LINE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         end(true);
         clean_tap_code(KC_BSPC);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case ADD_NEXT_LINE:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         end(false);
         clean_tap_code(KC_ENTER);
 
-        repeat_keycode = keycode;
-        repeat_mods = mods;
-        repeat_combi = combi;
-        repeat_is_lang1 = is_lang1;
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
-        ime_change_if_needed(repeat_is_lang1, is_lang1_bk);
+        save_repeat_key(keycode, mods, combi, is_lang1);
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     case DEBUG:
       if (record->event.pressed) {
-        clear_oneshot_mods();
+        initialize_key_processing();
 
         ime_change_if_needed(is_lang1, false);
 
@@ -761,10 +674,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         send_string(s);
 
         ime_change_if_needed(false, is_lang1);
-
-        restore_mods(mods_bk);
-        combi = combi_bk;
-        is_lang1 = is_lang1_bk;
+        finalize_key_processing(mods_bk, combi_bk, is_lang1_bk);
       }
       return false;
     default:
@@ -778,25 +688,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 bool process_normal_mode_user(uint16_t key_code, const keyrecord_t *record) {
-    switch (key_code) {
-      case KC_SLSH:
-        if (record->event.pressed) {
-          if (is_windows) {
-            tap_code16(C(KC_F));
-          } else {
-            tap_code16(G(KC_F));
-          }
+  switch (key_code) {
+    case KC_SLSH:
+      if (record->event.pressed) {
+        if (is_windows) {
+          tap_code16(C(KC_F));
+        } else {
+          tap_code16(G(KC_F));
         }
-        return false;
-      case KC_ESC:
-        if (record->event.pressed) {
-          disable_vim_mode();
-          tap_code16(key_code);
-          enable_vim_mode();
-        }
-        return false;
-    }
-    return true;
+      }
+      return false;
+    case KC_ESC:
+      if (record->event.pressed) {
+        disable_vim_mode();
+        tap_code16(key_code);
+        enable_vim_mode();
+      }
+      return false;
+  }
+  return true;
 }
 
 bool process_insert_mode_user(uint16_t key_code, const keyrecord_t *record) {
