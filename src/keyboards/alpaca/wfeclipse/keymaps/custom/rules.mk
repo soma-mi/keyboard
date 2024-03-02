@@ -7,7 +7,7 @@ OS_DETECTION_ENABLE = yes
 # マウスキー 有効化
 MOUSEKEY_ENABLE = yes
 # COMBO 有効化
-COMBO_ENABLE = yes
+COMBO_ENABLE = no
 # TAP DANCE 有効化
 TAP_DANCE_ENABLE = yes
 # DEBUG

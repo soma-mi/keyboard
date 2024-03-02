@@ -2,7 +2,7 @@
 
 #define DYNAMIC_KEYMAP_LAYER_COUNT 6
 #define TAPPING_TERM 160
-#define COMBO_TERM 500
+// #define COMBO_TERM 500
 // #define PERMISSIVE_HOLD
 #define CAPSWORD_USE_SHIFT
 #define VIM_FOR_ALL
